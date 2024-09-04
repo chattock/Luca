@@ -5,7 +5,7 @@ let initialEdges = [];
 let initialLayout = {};
 
 document.addEventListener("DOMContentLoaded", async () => {
-    const response = await fetch('combined/ALL.xml');
+    const response = await fetch('unzipped/A00001.headed.xml');
     const xmlText = await response.text();
     const parser = new DOMParser();
     const xmlDoc = parser.parseFromString(xmlText, "text/xml");

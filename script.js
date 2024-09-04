@@ -5,20 +5,19 @@ let initialEdges = [];
 let initialLayout = {};
 
 document.addEventListener("DOMContentLoaded", async () => {
-    const url = 'contributions-choc140104.pdf';
-    const loadingTask = pdfjsLib.getDocument(url);
-    const pdf = await loadingTask.promise;
+    const response = await fetch('combined/ALL.xml');
+    const xmlText = await response.text();
+    const parser = new DOMParser();
+    const xmlDoc = parser.parseFromString(xmlText, "text/xml");
 
-    for (let i = 0; i < pdf.numPages; i++) {
-        const page = await pdf.getPage(i + 1);
-        const textContent = await page.getTextContent();
-        const textItems = textContent.items.map(item => item.str).join(' ');
-        data.push({ fullText: textItems });
-    }
+    const textElements = xmlDoc.getElementsByTagName('TEXT');
+    const textContent = Array.from(textElements).map(elem => elem.textContent).join(' ');
 
-    console.log("Full Text:", data.map(item => item.fullText).join(' '));
+    data = [{ fullText: textContent }];
+
+    console.log("Full Text:", textContent);
     console.log("Tokens:", getTokensForAllData());
-    
+
     generateCrisisRatio();
     generateGraph();
     generateProbabilityGraph();
@@ -28,25 +27,23 @@ document.getElementById('fileInput').addEventListener('change', async function(e
     const file = event.target.files[0];
     if (file) {
         const reader = new FileReader();
-        reader.onload = async function(e) {
-            const loadingTask = pdfjsLib.getDocument(new Uint8Array(e.target.result));
-            const pdf = await loadingTask.promise;
+        reader.onload = function(e) {
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(e.target.result, "text/xml");
 
-            for (let i = 0; i < pdf.numPages; i++) {
-                const page = await pdf.getPage(i + 1);
-                const textContent = await page.getTextContent();
-                const textItems = textContent.items.map(item => item.str).join(' ');
-                data.push({ fullText: textItems });
-            }
+            const textElements = xmlDoc.getElementsByTagName('TEXT');
+            const textContent = Array.from(textElements).map(elem => elem.textContent).join(' ');
 
-            console.log("Full Text:", data.map(item => item.fullText).join(' '));
+            data = [{ fullText: textContent }];
+
+            console.log("Full Text:", textContent);
             console.log("Tokens:", getTokensForAllData());
 
             generateCrisisRatio();
             generateGraph();
             generateProbabilityGraph();
         };
-        reader.readAsArrayBuffer(file);
+        reader.readAsText(file);
     }
 });
 

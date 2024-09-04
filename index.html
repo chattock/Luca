@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Graph Visualization</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/papaparse/5.3.0/papaparse.min.js"></script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+
+<header>
+    <h1>Network Graph Visualization</h1>
+    <p>This tool allows you to visualize relationships between words in a network graph format, providing insights into data patterns. Click the Button below to download data that can be used for this website.</p>
+</header>
+
+<main>
+    <section>
+        <h2>Upload PDF File</h2>
+        <label for="fileInput" class="btn btn-color-1">Choose File</label>
+        <input type="file" id="fileInput" accept=".pdf">
+        <p>Select a Pdf file to upload. The Current file only shows data from one paper; 'Distributional Concept Analysis, A Computational Model for History of Concepts".</p>
+    </section>
+
+    <section>
+        <label for="targetWord">Target Word:</label>
+        <input type="text" id="targetWord" value="words">
+        <p>Enter the main word you want to analyze.</p>
+        <h2>Generate Target Word Ratio</h2>
+        <p>Find the ratio of the target words to all the words in the texts.</p>
+        <button class="btn btn-color-1" onclick="generateCrisisRatio()">Generate Ratio</button>
+        <div id="overallRatioDisplay"></div>
+    </section>
+
+    <section>
+        <h2>Word tree</h2>
+        <p>build a graph to show connections between words below</p>
+
+        <h2>Remove Common Words</h2>
+        <textarea id="commonWordsText" rows="10" cols="50">
+is, to, the, for, and, with, in, of, on, at, by, from, as, an, it, or, if, but, be, has, have, was, were, are, can, will, would, should, could, a, this, that, these, those, there, their, they, them, he, as, she, his, her, him, i, you, we, us, our, your, ., ,, !, ?, :, ;, (, ), [, ], {, }, <, >, if, whether, while, although, ', which, had, ``, 's, not, '', -, when, 'the, during, its, p., over, such, led, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, q, w, e, r, t, y, u, i, o, p, a, s, d, f, g, h, j, k, l, z, x, c, v, b, n, m,
+        </textarea>
+        <p>Modify the list of common words to exclude from analysis. These words are typically non-informative.</p>
+
+        <label for="contextWindowSize">Context Window Size:</label>
+        <input type="range" id="contextWindowSize" min="1" max="100" step="1" value="5">
+        <span id="contextWindowSizeValue">5</span>
+        <p>The Context Window Size defines the range of words surrounding each occurrence of the target word that are analyzed for potential relationships. This setting allows you to specify how many words before and after the target word should be included in the analysis, (this includes the context window of neighbours).</p>
+
+        <label for="topWordsCount">Top Words count Related to Target Word:</label>
+        <input type="number" id="topWordsCount" value="50" min="1">
+        <p>Specify how many top related words to display. This helps to focus on the most relevant connections.</p>
+
+        <label for="targetProximityStrength">Target Word Proximity Strength:</label>
+        <input type="range" id="targetProximityStrength" min="0" max="10" step="0.1" value="0">
+        <span id="targetProximityStrengthValue">0</span>
+        <p>Adjust how strongly connected words are positioned near the target word. Increasing this value brings frequently connected words closer to the target.</p>
+
+        <label for="neighborsCount">Neighbors Count:</label>
+        <input type="number" id="neighborsCount" value="0" min="0">
+        <p>The Neighbors Count enhances the visualization by highlighting the most frequently co-occurring words as direct connections to each of the top frequent words in the graph. If the neighbors count is set to 3, the graph connects the three most frequently co-occurring words that are next to each top word, providing clear insights into direct connections. This feature allows users to explore the strongest relationships within the dataset.</p>
+
+        <label for="neighborWeight">Neighbor Weight:</label>
+        <input type="range" id="neighborWeight" min="-1" max="1" step="0.1" value="0">
+        <span id="neighborWeightValue">0</span>
+        <p>Adjust the influence of neighboring words. A higher weight places words connected to more neighbours closer to eachother. Putting this at a negative value helps to highlight the words with the most connections by pushing them to the outskirts of the graph. When you click on a word, it will show you its connections to its neighbours, as well as its neighbouring word's neighbors.</p>
+    </section>
+
+    <div class="checkbox-container">
+        <input type="checkbox" id="directConnectionsCheckbox" onclick="toggleGraphFunction()">
+        <label for="directConnectionsCheckbox">Click this toggle to only show connections to direct neighbours when clicking on words</label>
+    </div>
+
+    <div class="btn-container">
+        <button id="generateBtn" class="btn btn-color-1" onclick="generateGraph()">Generate Graph</button>
+    </div>
+
+    <section>
+        <div id="graph-container">
+            <div id="graph"></div>
+        </div>
+    </section>
+
+    <section>
+        <h2>Calculate PMI</h2>
+        <div>
+            <select id="neighborSelect">
+                <!-- Options will be populated dynamically -->
+            </select>
+            <input type="text" id="neighborInput" placeholder="Or type a word">
+        </div>
+        <p>
+        Pointwise Mutual Information (PMI) is a statistical measure used to assess the strength of association between two words. It compares the probability of two words appearing together to the probability of them appearing independently of each other. Select neighboring words from the dropdown list or type a word to calculate the PMI value with the target word. The PMI value will be displayed below.
+        </p>  
+        <button id="calculatePMIButton" class="btn btn-color-1">Calculate PMI</button>
+        <p id="pmiResult"></p>
+        <p>
+        A higher PMI value indicates that the two words co-occur more often than would be expected by chance, suggesting a strong association between them. The window for words to coexist together when calculating PMI is determined by the contextWindowSize variable. The formula for PMI between two words x and y is:
+        </p>
+        <p>
+            \[
+            \text{PMI}(x, y) = \log_2 \left( \frac{P(x, y)}{P(x) \times P(y)} \right)
+            \]
+        </p>
+        <p>
+        P(x) = n of Word1 only / totalWords;
+        P(y) = n of Word2 only / totalWords;
+        P(x,y) = word1 and word2 together / totalWords;
+        </p>  
+        <h2>Calculate Relative Position</h2>
+        <p>This button displays how often the selected neighbor word appears in relation to the target word within the specified context window size.</p>
+        <button id="calculateProbabilityGraph" class="btn btn-color-1">Generate Graph</button>
+        <div id="probabilityGraph"></div>
+    </section>
+
+
+</main>
+
+<footer>
+    <p>&copy; 2024 James Chattock Network Graph Visualization</p>
+</footer>
+
+<script src="script.js"></script>
+
+</body>
+</html>

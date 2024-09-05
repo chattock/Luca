@@ -4,81 +4,107 @@ let initialNodes = [];
 let initialEdges = [];
 let initialLayout = {};
 
-document.addEventListener("DOMContentLoaded", async () => {
-    const response = await fetch('unzipped/A00001.headed.xml');
-    const xmlText = await response.text();
-    const parser = new DOMParser();
-    const xmlDoc = parser.parseFromString(xmlText, "text/xml");
+document.addEventListener("DOMContentLoaded", () => {
+    updateYearRangeDisplay();
+    loadDataForYearRange();
+});
 
-    const textElements = xmlDoc.getElementsByTagName('TEXT');
-    const textContent = Array.from(textElements).map(elem => elem.textContent).join(' ');
+document.getElementById('yearRangeStart').addEventListener('input', updateYearRangeDisplay);
+document.getElementById('yearRangeEnd').addEventListener('input', updateYearRangeDisplay);
 
-    data = [{ fullText: textContent }];
+function updateYearRangeDisplay() {
+    const startYear = document.getElementById('yearRangeStart').value;
+    const endYear = document.getElementById('yearRangeEnd').value;
+    document.getElementById('yearRangeDisplay').textContent = `${startYear} - ${endYear}`;
+}
 
-    console.log("Full Text:", textContent);
+async function loadDataForYearRange() {
+    const startYear = parseInt(document.getElementById('yearRangeStart').value);
+    const endYear = parseInt(document.getElementById('yearRangeEnd').value);
+    data = []; // Clear previous data
+    let totalWords = 0;
+    document.getElementById('wordLimitMessage').textContent = ''; // Clear previous message
+
+    for (let year = startYear; year <= endYear; year++) {
+        if (totalWords >= 9999999) {
+            document.getElementById('wordLimitMessage').textContent = `Reached the word limit at year ${year - 1}.`;
+            console.log("Reached the word limit. Stopping data loading.");
+            break;
+        }
+
+        try {
+            const response = await fetch(`date/${year}.xml`);
+            if (response.ok) {
+                const xmlText = await response.text();
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(xmlText, "text/xml");
+
+                const textElements = xmlDoc.getElementsByTagName('TEXT');
+                const textContent = Array.from(textElements).map(elem => elem.textContent).join(' ');
+
+                const words = textContent.split(/\W+/).filter(Boolean);
+                totalWords += words.length;
+
+                if (totalWords > 9999999) {
+                    document.getElementById('wordLimitMessage').textContent = `Reached the word limit at year ${year}.`;
+                    console.log("Reached the word limit during processing. Stopping data loading.");
+                    break;
+                }
+
+                data.push({ year: year, fullText: textContent });
+            }
+        } catch (error) {
+            console.error(`Error loading data for year ${year}:`, error);
+        }
+    }
+
+    console.log("Total Words Processed:", totalWords);
+    console.log("Full Text:", data.map(item => item.fullText).join(' '));
     console.log("Tokens:", getTokensForAllData());
 
     generateCrisisRatio();
     generateGraph();
     generateProbabilityGraph();
-});
-
-document.getElementById('fileInput').addEventListener('change', async function(event) {
-    const file = event.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const parser = new DOMParser();
-            const xmlDoc = parser.parseFromString(e.target.result, "text/xml");
-
-            const textElements = xmlDoc.getElementsByTagName('TEXT');
-            const textContent = Array.from(textElements).map(elem => elem.textContent).join(' ');
-
-            data = [{ fullText: textContent }];
-
-            console.log("Full Text:", textContent);
-            console.log("Tokens:", getTokensForAllData());
-
-            generateCrisisRatio();
-            generateGraph();
-            generateProbabilityGraph();
-        };
-        reader.readAsText(file);
-    }
-});
+}
 
 function getTokensForAllData() {
     const fullText = data.map(item => item.fullText).join(' ');
     return fullText.toLowerCase().split(/\W+/).filter(Boolean);
 }
 
-function calculateRatio(text, wordCount, targetWord) {
-    if (Array.isArray(text) && wordCount > 0) {
-        const targetCount = text.reduce(
-            (acc, t) =>
-                acc + (t.toLowerCase().match(new RegExp(targetWord.toLowerCase(), 'g')) || []).length,
-            0
-        );
-        return targetCount / wordCount;
-    }
-    return 0;
-}
-
 function generateCrisisRatio() {
     const targetWord = document.getElementById('targetWord').value.toLowerCase();
-    let totalTargetCount = 0;
-    let totalWordCount = 0;
+    const crisisRatioByYear = {};
 
     data.forEach(item => {
+        const year = item.year;
         const text = item.fullText.toLowerCase();
-        totalTargetCount += (text.match(new RegExp(targetWord, 'g')) || []).length;
-        totalWordCount += text.split(/\W+/).filter(Boolean).length;
+        const wordCount = text.split(/\W+/).filter(Boolean).length;
+        const targetCount = (text.match(new RegExp(targetWord, 'g')) || []).length;
+
+        crisisRatioByYear[year] = targetCount / wordCount;
     });
 
-    const overallRatio = totalTargetCount / totalWordCount;
+    const years = Object.keys(crisisRatioByYear).sort((a, b) => a - b);
+    const ratios = years.map(year => crisisRatioByYear[year]);
 
-    document.getElementById('overallRatioDisplay').innerText = 
-        `Overall Ratio of "${targetWord}": ${overallRatio.toFixed(6)}`;
+    const trace = {
+        x: years,
+        y: ratios,
+        type: 'bar',
+        marker: { color: 'lightcoral' }
+    };
+
+    const layout = {
+        title: `Ratio of "${targetWord}" Per Year`,
+        xaxis: { title: 'Year' },
+        yaxis: { 
+            title: `Ratio of "${targetWord}"`,
+            tickformat: '.6f'
+        }
+    };
+
+    Plotly.newPlot('crisisRatioGraph', [trace], layout);
 }
 
 function getCommonWords() {

@@ -15,26 +15,31 @@
 
 <header>
     <h1>Network Graph Visualization</h1>
-    <p>This tool allows you to visualize relationships between words in a network graph format, providing insights into data patterns. Click the Button below to download data that can be used for this website.</p>
+    <p>This tool allows you to visualize relationships between words in a network graph format, providing insights into data patterns.</p>
 </header>
 
 <main>
     <section>
-        <h2>Upload PDF File</h2>
-        <label for="fileInput" class="btn btn-color-1">Choose File</label>
-        <input type="file" id="fileInput" accept=".xml">
-        <p>Select a Pdf file to upload. The Current file only shows data from one paper; 'Distributional Concept Analysis, A Computational Model for History of Concepts".</p>
+        <h2>Select Year Range</h2>
+        <label for="yearRange">Year Range:</label>
+        <input type="range" id="yearRangeStart" min="1474" max="1800" value="1474">
+        <input type="range" id="yearRangeEnd" min="1474" max="1800" value="1500">
+        <p>Selected Range: <span id="yearRangeDisplay"></span></p>
+        <button class="btn btn-color-1" onclick="loadDataForYearRange()">Load Data</button>
+        <p id="wordLimitMessage"></p>
     </section>
 
     <section>
         <label for="targetWord">Target Word:</label>
-        <input type="text" id="targetWord" value="passionate">
+        <input type="text" id="targetWord" value="lord">
         <p>Enter the main word you want to analyze.</p>
         <h2>Generate Target Word Ratio</h2>
         <p>Find the ratio of the target words to all the words in the texts.</p>
         <button class="btn btn-color-1" onclick="generateCrisisRatio()">Generate Ratio</button>
-        <div id="overallRatioDisplay"></div>
+        <div id="crisisRatioGraph"></div>
     </section>
+</main>
+
 
     <section>
         <h2>Word tree</h2>
